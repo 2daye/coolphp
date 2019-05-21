@@ -1,0 +1,19 @@
+{
+  "name": "2daye/coolphp",
+  "type": "framework",
+  "description": "coolphp framework",
+  "keywords": [
+    "php framework"
+  ],
+  "authors": [
+    {
+      "name": "2daye",
+      "email": "2664671146@qq.com"
+    }
+  ],
+  "homepage": "http://www.418412.com/",
+  "license": "MIT",
+  "require": {
+    "php": ">=5.3.0"
+  }
+}

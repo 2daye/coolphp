@@ -1,6 +1,8 @@
 <?php
-/*PHP Socket服务端类*/
-
+/**
+ * PHP Socket服务端类
+ * 作者：2daye
+ */
 //设置客户端断开连接时是否中断脚本的执行
 ignore_user_abort(true);
 //设置脚本最大执行时间 0秒
@@ -11,19 +13,24 @@ class Socket
     //连接主要的socket
     private $connect;
     //socket连接列表数组
-    private $sockets = [];
+    private $sockets_list = [];
 
-    //构造函数初始化socket服务器
+    /**
+     * 构造函数 - 初始化Socket服务器
+     * Socket constructor.
+     * @param $ip_address
+     * @param $port
+     */
     public function __construct($ip_address, $port)
     {
-        /*
+        /**
          * 创建一个TCP 流socket服务器
          * socket_create()函数创建一个socket，0参数代表，SQL_TCP处理协议
          */
         $this->connect = socket_create(AF_INET, SOCK_STREAM, 0);
         //设置IP和端口重用,在重启服务器后能重新使用此端口;
         socket_set_option($this->connect, SOL_SOCKET, SO_REUSEADDR, 1);
-        /*
+        /**
          * 绑定socket到ip护着端口
          * socket_bind()函数用于将ip地址绑定到socket_create()所创建的资源中
          */
@@ -37,24 +44,22 @@ class Socket
         if (!$this->connect) {
             return false;
         }
-
         //把主连接socket资源存入，列表数组
-        $this->sockets[0] = ['resource' => $this->connect];
-
+        $this->sockets_list[0] = ['resource' => $this->connect];
         while (true) {
-            /*
+            /**
              * 作用：获取read数组中活动的socket，并且把不活跃的从read数组中删除,具体的看文档。
              * 这是一个同步方法，必须得到响应之后才会继续下一步,常用在同步非阻塞IO
              * 说明:
-             * 1 新连接到来时,被监听的端口是活跃的,如果是新数据到来或者客户端关闭链接时,活跃的是对应的客户端socket而不是服务器上被监听的端口
-             * 2 如果客户端发来数据没有被读走,则socket_select将会始终显示客户端是活跃状态并将其保存在readfds数组中
-             * 3 如果客户端先关闭了,则必须手动关闭服务器上相对应的客户端socket,否则socket_select也始终显示该客户端活跃(这个道
+             * 1.新连接到来时,被监听的端口是活跃的,如果是新数据到来或者客户端关闭链接时,活跃的是对应的客户端socket而不是服务器上被监听的端口
+             * 2.如果客户端发来数据没有被读走,则socket_select将会始终显示客户端是活跃状态并将其保存在readfds数组中
+             * 3.如果客户端先关闭了,则必须手动关闭服务器上相对应的客户端socket,否则socket_select也始终显示该客户端活跃(这个道
              * 理跟"有新连接到来然后没有用socket_access把它读出来,导致监听的端口一直活跃"是一样的)
-             * */
+             */
             $write = array();
             $except = null;
             //array_column()返回输入数组中某个单一列的值
-            $sockets = array_column($this->sockets, 'resource');
+            $sockets = array_column($this->sockets_list, 'resource');
             $read_num = socket_select($sockets, $write, $except, null);
             if ($read_num === false) {
                 return false;
@@ -76,26 +81,26 @@ class Socket
                         'port' => $ports,
                     ];
                     //用socket连接的id，作为socket连接列表数组的索引
-                    $this->sockets[(int)$client] = $socket_info;
+                    $this->sockets_list[(int)$client] = $socket_info;
                 } else {
-                    /*
-                    * 如果是PHP命令行模式使用socket_read()函数接受客户端信息
-                    * 如果是网页客户端或者PHP正常模式则使用socket_recv()函数接受客户端信息
-                    */
+                    /**
+                     * 如果是PHP命令行模式使用socket_read()函数接受客户端信息
+                     * 如果是网页客户端或者PHP正常模式则使用socket_recv()函数接受客户端信息
+                     */
                     $bytes = @socket_recv($socket, $buffer, 2048, 0);
                     if ($bytes == 8) {
                         socket_close($socket);
                     } else {
-                        if (!$this->sockets[(int)$socket]['handshake']) {
+                        if (!$this->sockets_list[(int)$socket]['handshake']) {
                             if ($this->shake_hands($socket, $buffer)) {
-                                $this->sockets[(int)$socket]['handshake'] = true;
+                                $this->sockets_list[(int)$socket]['handshake'] = true;
                             }
                         } else {
                             //已经握手，直接接受数据，并处理
                             $buffer = $this->parsing_data_frame($buffer);
                             $msg = $this->assembly_data_frame(json_encode($buffer));
                             //广播公开信号
-                            foreach ($this->sockets as $socketsss) {
+                            foreach ($this->sockets_list as $socketsss) {
                                 if ($socketsss['resource'] == $this->connect) {
                                     //continue跳出本轮循环，进行下一轮
                                     continue;
@@ -110,7 +115,12 @@ class Socket
         }
     }
 
-    //握手
+    /**
+     * 握手
+     * @param $socket
+     * @param $buffer
+     * @return bool
+     */
     private function shake_hands($socket, $buffer)
     {
         //定义key
@@ -133,7 +143,11 @@ class Socket
         return true;
     }
 
-    //解析数据帧
+    /**
+     * 解析数据帧
+     * @param $buffer
+     * @return string
+     */
     private function parsing_data_frame($buffer)
     {
         $decoded = '';
@@ -156,10 +170,12 @@ class Socket
         return $decoded;
     }
 
-    /*
+    /**
      * 组装帧数据
-     * 作用将普通信息，组装成 WebSocket可以使用的数据帧
-     * */
+     * 将普通信息组装成 WebSocket可以使用的数据帧
+     * @param $value
+     * @return string
+     */
     private function assembly_data_frame($value)
     {
         $frame = [];
@@ -187,7 +203,6 @@ class Socket
         $data = implode('', $frame);
         return pack("H*", $data);
     }
-
 }
 
 $s = new Socket('www.yoop.com.cn', '8080');

@@ -243,33 +243,6 @@ class Functions
     }
 
     /**
-     * 判断当前是否是Ajax请求
-     * @return bool
-     */
-    public static function isAjax()
-    {
-        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
-    }
-
-    /**
-     * 判断当前是否是get请求
-     * @return bool
-     */
-    public static function isGet()
-    {
-        return ($_SERVER['REQUEST_METHOD'] == 'GET') ? true : false;
-    }
-
-    /**
-     * 判断当前是否是post请求
-     * @return bool
-     */
-    public static function isPost()
-    {
-        return (isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') ? true : false;
-    }
-
-    /**
      * 得到文件后缀名
      * @param $file //文件的名字
      * @return mixed

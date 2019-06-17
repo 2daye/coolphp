@@ -1,7 +1,7 @@
 <?php
-/*
+/**
  * CoolPhp框架入口文件
- * */
+ */
 //打开session
 session_start();
 //设置页面中文编码集

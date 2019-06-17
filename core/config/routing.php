@@ -15,5 +15,5 @@ return array(
         'abc' => ['index', 'index', 'abc']
     ],
     //框架路径
-    'FP' => '/coolphp/'
+    'FP' => '/'
 );

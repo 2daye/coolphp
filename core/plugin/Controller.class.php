@@ -1,9 +1,10 @@
 <?php
-/*
+/**
  * 控制器父类
  * 1.初始化模板引擎
  * 2.实例化 分页类
- * */
+ * 作者：2daye
+ */
 namespace core\plugin;
 
 class Controller
@@ -18,7 +19,18 @@ class Controller
     private static $Template = null;
 
     //控制器父类的构造方法
-    /*public function __construct(){}*/
+    public function __construct()
+    {
+        //控制器初始化
+        $this->_cinit();
+    }
+
+    /**
+     * 控制器初始化
+     */
+    protected function _cinit()
+    {
+    }
 
     //初始化模板类
     protected function init_template()

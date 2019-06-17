@@ -1,8 +1,8 @@
 <?php
-/*
+/**
  * 配置类
- * */
-
+ * 作者：2daye
+ */
 namespace core\plugin;
 
 class Config

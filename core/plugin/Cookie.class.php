@@ -1,11 +1,12 @@
 <?php
-/*
- * CooKie操作类
- * */
-
+/**
+ * Cookie操作类
+ * 作者：2daye
+ */
 namespace core\plugin;
-
-/* 加密采用了md5，base64，PHP逻辑异或运算 ^
+/**
+ * 技术简介
+ * 加密采用了md5，base64，PHP逻辑异或运算 ^
  * 《逻辑异或》可使用于加密算法某一环节或更多环节，使算法更复杂，不易被破解，安全性更高。
  * 1.PHP里的逻辑异或和C语言是相同，
  * 2.int型是二进制的异或运算,
@@ -41,12 +42,14 @@ class Cookie
 
     /**
      * 设置cookie
-     * name     必需。规定 cookie 的名称
-     * value    必需。规定 cookie 的值
-     * expire   可选。规定 cookie 的有效期
-     * path     可选。规定 cookie 的服务器路径
-     * domain   可选。规定 cookie 的域名
-     * secure   可选。规定是否通过安全的 HTTPS 连接来传输 cookie
+     * @param $name //cookie的名
+     * @param $value //cookie的值
+     * @param int $expire //cookie过期时间
+     * @param bool $encryption //是否给cookie的值加密，默认加密
+     * @param string $path //cookie的服务器路径
+     * @param string $domain //cookie的域名
+     * @param int $secure //规定是否通过安全的 HTTPS 连接来传输 cookie
+     * @return bool
      */
     public static function set($name, $value, $expire = 3600, $encryption = true, $path = '/', $domain = '', $secure = 0)
     {
@@ -62,8 +65,13 @@ class Cookie
         }
     }
 
-    /*
+    /**
      * 删除cookie
+     * @param $name
+     * @param string $path
+     * @param string $domain
+     * @param int $secure
+     * @return bool
      */
     public static function delete($name, $path = '/', $domain = '', $secure = 0)
     {
@@ -74,9 +82,12 @@ class Cookie
         }
     }
 
-    /*
+    /**
      * 获取cookie
      * name cookie名称
+     * @param $name
+     * @param bool $decryption
+     * @return string
      */
     public static function get($name, $decryption = true)
     {
@@ -88,8 +99,11 @@ class Cookie
         }
         return '';
     }
-    /*
+
+    /**
      * 字符串加密
+     * @param $string
+     * @return string
      */
     private static function encryption($string)
     {
@@ -113,8 +127,10 @@ class Cookie
         return $code;
     }
 
-    /*
+    /**
      * 字符串解密
+     * @param $string
+     * @return string
      */
     private static function decrypt($string)
     {

@@ -1,14 +1,17 @@
 <?php
-/*
+/**
  * CoolPHP框架的核心类
- * */
+ */
 namespace core;
 
 use core\tool\Tool;
+use core\plugin\Request;
 
 class CoolPhp
 {
-    //框架运行方法run
+    /**
+     * 框架运行方法run
+     */
     public static function run()
     {
         //初始化Log类
@@ -27,7 +30,13 @@ class CoolPhp
         }
     }
 
-    //多模块运行
+    /**
+     * 多模块运行
+     * @param $routing_module
+     * @param $routing_controller
+     * @param $routing_methods
+     * @throws \Exception
+     */
     public static function multi_run($routing_module, $routing_controller, $routing_methods)
     {
         //拼接模块文件夹
@@ -42,18 +51,19 @@ class CoolPhp
         if (is_dir($module) && $routing_module != 'general') {
             //判断控制器文件存在吗
             if (is_file($controller_class_file)) {
-                //如果是访问后台模块，就在session记录一下当前路由
-                if ($routing_module == 'admin') {
-                    Tool::session('set', 'routing', ['module' => $routing_module, 'controller' => $routing_controller, 'methods' => $routing_methods]);
-                }
                 //控制器存在直接new出控制器
                 $controller = new $controller_class();
                 //method_exists()判断控制器中的一个方法是否存在
                 if (method_exists($controller, $controller_action)) {
+                    //把模块/控制器/操作方法名称传入Request类
+                    $request = Request::get_instance();
+                    $request->module = $routing_module;
+                    $request->controller = $routing_controller;
+                    $request->methods = $routing_methods;
                     //方法存在执行这个方法
                     $controller->$controller_action();
                     //打上日志，执行了什么控制器和控制器的什么方法
-                    /*\core\plugin\Log::log('module->' . $routing_module . '   controller->' . $routing_controller . '   methods->' . $routing_methods);*/
+                    //\core\plugin\Log::log('module->' . $routing_module . '   controller->' . $routing_controller . '   methods->' . $routing_methods);
                 } else {
                     if (DEBUG) {
                         throw new \Exception($controller_action . '，是一个不存在的方法');
@@ -77,7 +87,12 @@ class CoolPhp
         }
     }
 
-    //单模块运行
+    /**
+     * 单模块运行
+     * @param $routing_controller
+     * @param $routing_methods
+     * @throws \Exception
+     */
     public static function single_run($routing_controller, $routing_methods)
     {
         //拼接控制器
@@ -92,10 +107,14 @@ class CoolPhp
             $controller = new $controller_class();
             //method_exists()判断控制器中的一个方法是否存在
             if (method_exists($controller, $controller_action)) {
+                //把控制器/操作方法名称传入Request类
+                $request = Request::get_instance();
+                $request->controller = $routing_controller;
+                $request->methods = $routing_methods;
                 //方法存在执行这个方法
                 $controller->$controller_action();
                 //打上日志，执行了什么控制器和控制器的什么方法
-                /*\core\plugin\Log::log('controller->' . $routing_controller . '   methods->' . $routing_methods);*/
+                //\core\plugin\Log::log('controller->' . $routing_controller . '   methods->' . $routing_methods);
             } else {
                 if (DEBUG) {
                     throw new \Exception($controller_action . '，是一个不存在的方法');
@@ -112,7 +131,10 @@ class CoolPhp
         }
     }
 
-    //自定义引入类函数
+    /**
+     * 引入框架的类
+     * @param $class
+     */
     public static function load($class)
     {
         $cool_class = str_replace('\\', '/', $class);
@@ -123,11 +145,11 @@ class CoolPhp
         }
     }
 
-    /*
+    /**
      * 字符串命名风格转换（驼峰规则，首字母大写）
-     * string $string 字符串
+     * @param $string //要转换的字符串
      * @return string
-     * */
+     */
     public static function camel_case($string)
     {
         //preg_replace_callback()执行一个正则表达式搜索并且使用一个回调进行替换

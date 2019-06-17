@@ -1,12 +1,10 @@
 <?php
-/*
+/**
  * 模板类 - 继承Smarty
  * 1.重写Smarty默认输出符号{}，避免和js的{}符号冲突
  * 2.重写Smarty默认模板路径
  * 3.重写Smarty默认模板缓存路径
- * */
-
-//命名空间
+ */
 namespace core\plugin;
 
 //引入使用Smatry引擎模板
@@ -24,11 +22,11 @@ class Template extends \Smarty
         $this->rewrite_smarty_config();
     }
 
-    /*
+    /**
      * 重写 Smarty
      * 模板/缓存，目录
      * 重写 Smarty原始模板输出符号{}
-     * */
+     */
     private function rewrite_smarty_config()
     {
         //重写Smarty模板数据传输符号，如果用Smarty原始的，后期项目可能会有{}符号的冲突

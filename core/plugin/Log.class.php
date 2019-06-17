@@ -1,7 +1,8 @@
 <?php
-/*
+/**
  * Log日志类
- * */
+ * 作者：2daye
+ */
 namespace core\plugin;
 
 class Log

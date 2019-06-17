@@ -1,14 +1,10 @@
 <?php
-
 //控制器命名空间
 namespace core\app\index\controller;
 
 //父类控制器
-use core\plugin\Controller;
-//模型
-use core\app\index\model\IndexModel;
-//框架工具
 use core\tool\Tool;
+use core\plugin\Controller;
 
 class IndexController extends Controller
 {

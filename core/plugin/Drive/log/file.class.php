@@ -1,17 +1,29 @@
 <?php
+/**
+ * log日志类 - file
+ */
 namespace core\plugin\Drive\log;
-
-/*log日志文件驱动方案*/
 
 class file
 {
     public $path;
 
+    /**
+     * 初始化日志
+     * 调用配置，判断使用什么日志方法
+     * file constructor.
+     */
     public function __construct()
     {
         $this->path = ROOT_PATH . \core\plugin\Config::get('log', 'LOG_PATH');
     }
 
+    /**
+     * 记录日志
+     * @param $name //日志内容
+     * @param string $logfilename //log文件名
+     * @return bool|int
+     */
     public function log($name, $logfilename = 'log')
     {
         $log_folder = date(\core\plugin\Config::get('log', 'LOG_FOLDER'));

@@ -1,6 +1,6 @@
 <?php
 /**
- * Whoops - php errors for cool kids
+ * Whoops - php errors for cool kids 2.3.1
  * @author Filipe Dobreira <http://github.com/filp>
  */
 

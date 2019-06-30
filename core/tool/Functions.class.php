@@ -11,17 +11,45 @@ class Functions
      * 框架更加漂亮的输出方法，变量/数组/参数
      * @param $var //要展现的数组或者变量
      * @param bool $debug //是否断点调试
+     * @param string $label //标签注释输输出的数据
      */
-    public static function p($var, $debug = false)
+    public static function p($var, $debug = false, $label = '')
     {
-        //is_bool()检测变量是否是布尔型
+        /**
+         * 获取方法传入的参数
+         * 使用func_get_args()函数
+         */
+        $parameter = func_get_args();
+        /**
+         * 判断是否打标签
+         */
+        if (2 === count($parameter) && !is_bool($debug)) {
+            $label = $debug . '：';
+        } elseif (3 === count($parameter)) {
+            $label = $label . '：';
+        }
+        /**
+         * ob_start
+         * 此函数将打开输出缓冲。
+         * 当输出缓冲激活后，脚本将不会输出内容（除http标头外），
+         * 相反需要输出的内容被存储在内部缓冲区中。
+         */
+        ob_start();
         if (is_null($var)) {
+            //null
             var_dump(null);
-        } else if (is_bool($var)) {
+        } elseif (is_bool($var)) {
+            //bool
             var_dump($var);
         } else {
-            echo "<pre style='position:relative;z-index:1000;padding:10px;border-radius:5px;background:#2a2a2a;border:1px solid #aaa;font-size:17px;line-height:22px;opacity:0.9;color: #f8fbfd;font-weight:bold;font-family: \"STHeiti\",sans-serif;'>" . print_r($var, true) . "</pre>";
+            print_r($var);
         }
+        /**
+         * ob_get_clean
+         * 得到当前缓冲区的内容并删除当前输出缓冲区
+         */
+        $p = ob_get_clean();
+        echo "<pre style='position:relative;z-index:1000;padding:10px;border-radius:5px;background:#2a2a2a;border:1px solid #aaa;font-size:17px;line-height:22px;opacity:0.9;color: #f8fbfd;font-weight:bold;font-family: \"STHeiti\",sans-serif;'>" . $label . $p . "</pre>";
         //判断是否断点
         if ($debug) {
             exit;

@@ -30,7 +30,7 @@ class Cache
      * @param $ttl //缓存过期时间，默认无过期时间
      * @return mixed
      */
-    public static function set($key, $data, $ttl = null)
+    public function set($key, $data, $ttl = null)
     {
         return self::$class->set($key, $data, $ttl);
     }
@@ -40,7 +40,7 @@ class Cache
      * @param $key //缓存的key
      * @return mixed
      */
-    public static function get($key)
+    public function get($key)
     {
         return self::$class->get($key);
     }
@@ -50,8 +50,40 @@ class Cache
      * @param $key //缓存的key
      * @return mixed
      */
-    public static function delete($key)
+    public function delete($key)
     {
         return self::$class->delete($key);
+    }
+
+    /**
+     * 获取key
+     * @param string $key //key名，默认*获取全部的key
+     * @return array
+     */
+    public function get_key($key = '*')
+    {
+        return self::$class->get_key($key);
+    }
+
+    /**
+     * 增加缓存的数字
+     * @param $key //缓存的key
+     * @param null $value //可选，如果填写了，就增加指定数量
+     * @return int
+     */
+    public function increase($key, $value = null)
+    {
+        return self::$class->increase($key, $value);
+    }
+
+    /**
+     * 减少缓存的数字
+     * @param $key //缓存的key
+     * @param null $value //可选，如果填写了，就减少指定数量
+     * @return int
+     */
+    public function reduce($key, $value = null)
+    {
+        return self::$class->reduce($key, $value);
     }
 }

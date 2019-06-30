@@ -10,9 +10,6 @@ class IndexController extends Controller
 {
     public function main()
     {
-        //使用index模型
-        /*$IndexModel = new IndexModel();
-        $welcome = $IndexModel->welcome();*/
         parent::assign('smile', ':&nbsp;)');
         parent::assign('welcome', '欢迎使用 CoolPhp框架 V1.0');
         parent::display('index/view/index.html');

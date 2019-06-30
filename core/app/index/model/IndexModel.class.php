@@ -2,6 +2,9 @@
 
 namespace core\app\index\model;
 
+use core\plugin\Cache;
+use core\tool\Tool;
+
 class IndexModel
 {
     private $db;
@@ -9,26 +12,12 @@ class IndexModel
     //表名
     private $table_name = 'abc';
 
-    private $user_name;
-    private $pass_word;
+    public $user_name;
+    public $pass_word;
 
     public function __construct()
     {
         $this->db = \core\plugin\Model::get_instance();
-    }
-
-    /*__set()方法用于设置私有属性值
-    在直接对类设置私有属性值的时候，自动调用了这个__set()方法，为私有属性赋值*/
-    public function __set($_key, $_value)
-    {
-        $this->$_key = $_value;
-    }
-
-    /*__get()方法用于获取私有属性值
-    在直接获取私有属性值的时候，自动调用了这个 __get()方法，获取私有属性的值*/
-    public function __get($_key)
-    {
-        return $this->$_key;
     }
 
     public function welcome()
@@ -39,6 +28,19 @@ class IndexModel
     //获得用户
     public function get_user()
     {
-        return $this->db->select($this->table_name, '*');
+        $cache = new Cache();
+        $user = $cache->get('user');
+        if ($user) {
+            Tool::p('缓存');
+            $data = $user;
+        } else {
+            Tool::p('数据库');
+            $data = $this->db->table('ims_wei_lease_user')
+                ->where([':id' => [4, 6, 9]])
+                ->where([':status' => 1])
+                ->select();
+            $cache->set('user', $data, 5);
+        }
+        return $data;
     }
 }

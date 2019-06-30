@@ -13,7 +13,7 @@ class redis
 
     /**
      * 静态单例模式
-     * @return Model
+     * @return redis
      */
     public static function get_instance()
     {
@@ -49,13 +49,22 @@ class redis
         }
     }
 
-    //单例防止克隆
-    private function __clone()
-    {
-    }
-
+    /**
+     * 设置缓存
+     * @param $key
+     * @param $value
+     * @param null $ttl
+     * @return bool
+     */
     public function set($key, $value, $ttl = null)
     {
+        //不能设置key为*的缓存
+        if ('*' === $key) {
+            return false;
+        }
+        if (is_array($value)) {
+            $value = json_encode($value);
+        }
         if (null == $ttl) {
             return $this->redis->set($key, $value);
         } else {
@@ -63,14 +72,96 @@ class redis
         }
     }
 
+    /**
+     * 获取缓存
+     * @param $key
+     * @return bool|mixed|string
+     */
     public function get($key)
     {
-        return $this->redis->get($key);
+        $result = $this->redis->get($key);
+        if (false !== $result) {
+            json_decode($result);
+            if (JSON_ERROR_NONE === json_last_error()) {
+                $array = json_decode($result, true);
+                if (is_array($array)) {
+                    return $array;
+                }
+            }
+            return $result;
+        } else {
+            return false;
+        }
     }
 
+    /**
+     * 删除缓存
+     * @param $key //要删除的缓存key，如果是*，就删除全部的缓存
+     * @return bool
+     */
     public function delete($key)
     {
-        $this->redis->delete($key);
+        if ('*' === $key) {
+            $key_array = $this->get_key();
+            foreach ($key_array as $key => $value) {
+                $this->redis->delete($value);
+            }
+        } else {
+            $this->redis->delete($key);
+        }
         return true;
+    }
+
+    /**
+     * 获取key
+     * @param string $key //key名，默认*获取全部的key
+     * @return array
+     */
+    public function get_key($key = '*')
+    {
+        return $this->redis->keys($key);
+    }
+
+    /**
+     * 增加缓存的数字
+     * @param $key //缓存的key
+     * @param null $value //可选，如果填写了，就增加指定数量
+     * @return int
+     */
+    public function increase($key, $value = null)
+    {
+        if (null === $value) {
+            return $this->redis->incr($key);
+        } else {
+            return $this->redis->incrBy($key, $value);
+        }
+    }
+
+    /**
+     * 减少缓存的数字
+     * @param $key //缓存的key
+     * @param null $value //可选，如果填写了，就减少指定数量
+     * @return int
+     */
+    public function reduce($key, $value = null)
+    {
+        if (null === $value) {
+            return $this->redis->decr($key);
+        } else {
+            return $this->redis->decrBy($key, $value);
+        }
+    }
+
+    //单例防止克隆
+    private function __clone()
+    {
+    }
+
+    /**
+     * 析构函数，关闭与redis的连接
+     */
+    public function __destruct()
+    {
+        $this->redis->close();
     }
 }

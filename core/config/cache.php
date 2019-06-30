@@ -1,7 +1,7 @@
 <?php
 return array(
     //CACHE缓存方式 支持file和redis
-    'CACHE_WAY' => 'file',
+    'CACHE_WAY' => 'redis',
     'FILE_CACHE' => [
         'PATH' => '/core/cache/file_cache/'
     ],

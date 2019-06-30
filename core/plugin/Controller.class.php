@@ -38,7 +38,7 @@ class Controller
         //调用模板引擎
         self::$Template = new \core\plugin\Template();
         //调用模板引擎父类Smarty的assign方法，设置网页模板根目录
-        self::$Template->assign('WebSite', \core\tool\Tool::getUrl());
+        //self::$Template->assign('WebSite', \core\tool\Tool::getUrl());
     }
 
     //重写Smarty的assign方法

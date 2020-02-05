@@ -1,5 +1,8 @@
 <?php
-return array(
+/**
+ * 框架路由配置文件
+ */
+return [
     //是否开启多模块设计
     'APP_MULTI_MODULE' => true,
     //是否开启URL中控制器和操作名的自动转换
@@ -16,4 +19,4 @@ return array(
     ],
     //框架路径
     'FP' => '/'
-);
+];

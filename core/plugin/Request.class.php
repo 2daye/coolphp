@@ -15,9 +15,13 @@ class Request
     private static $instance;
 
     //静态单例模式
-    public static function get_instance()
+    public static function getInstance()
     {
-        //通过使用 instanceof操作符 和 self关键字 ，可以检测到类是否已经被实例化，如果 $instance 没有保存，类本身的实例。
+        /**
+         * 通过使用 instanceof操作符 和 self关键字
+         * 可以检测到类是否已经被实例化
+         * 如果 $instance 没有保存，类本身的实例。
+         */
         if (!(self::$instance instanceof self)) {
             //就把本身的实例赋给 $instance
             self::$instance = new self();
@@ -36,19 +40,29 @@ class Request
     }
 
     /**
+     * 获取当前框架根路径
+     * @return string
+     */
+    public function frameworkRootPath()
+    {
+        $frameworkPath = Config::get('routing', 'FP') != '/' ? Config::get('routing', 'FP') : '';
+        return $this->networkingProtocol() . '://' . $_SERVER['HTTP_HOST'] . $frameworkPath;
+    }
+
+    /**
      * 获取当前域名
      * @return string
      */
-    public function domain_name()
+    public function domainName()
     {
-        return $this->networking_protocol() . '://' . $_SERVER['HTTP_HOST'];
+        return $this->networkingProtocol() . '://' . $_SERVER['HTTP_HOST'];
     }
 
     /**
      * 当前是否是ssl
      * @return bool
      */
-    public function is_ssl()
+    public function isSsl()
     {
         if (!empty($_SERVER['HTTPS']) && 'off' !== strtolower($_SERVER['HTTPS'])) {
             return true;
@@ -64,9 +78,9 @@ class Request
      * 获取当前网络请求协议
      * @return string
      */
-    public function networking_protocol()
+    public function networkingProtocol()
     {
-        return $this->is_ssl() ? 'https' : 'http';
+        return $this->isSsl() ? 'https' : 'http';
     }
 
     /**
@@ -100,7 +114,7 @@ class Request
      * 判断当前是否是ajax请求
      * @return bool
      */
-    public function is_ajax()
+    public function isAjax()
     {
         return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
     }
@@ -109,7 +123,7 @@ class Request
      * 判断当前是否是get请求
      * @return bool
      */
-    public function is_get()
+    public function isGet()
     {
         return ($_SERVER['REQUEST_METHOD'] == 'GET') ? true : false;
     }
@@ -118,7 +132,7 @@ class Request
      * 判断当前是否是post请求
      * @return bool
      */
-    public function is_post()
+    public function isPost()
     {
         return (isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') ? true : false;
     }

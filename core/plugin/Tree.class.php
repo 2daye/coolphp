@@ -22,11 +22,11 @@ class Tree
         $tree = array();
         foreach ($data as $key => $value) {
             //判断是不是父级
-            if ($value['parent_id'] == $parent_id) {
+            if ($value['pId'] == $parent_id) {
                 //写入层级
-                $value['layer'] = $layer;
+                $value['level'] = $layer;
                 //通过自身id递归方法寻找有没有子类，直到找不到子类为止
-                $value['child'] = $this->get_tree_array($data, $value['menu_id'], $layer + 1);
+                $value['child'] = $this->get_tree_array($data, $value['id'], $layer + 1);
                 //写入数组
                 $tree[] = $value;
             }

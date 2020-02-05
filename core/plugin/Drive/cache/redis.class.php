@@ -1,6 +1,7 @@
 <?php
 /**
  * 缓存类 - redis
+ * 作者：2daye
  */
 namespace core\plugin\Drive\cache;
 
@@ -15,7 +16,7 @@ class redis
      * 静态单例模式
      * @return redis
      */
-    public static function get_instance()
+    public static function getInstance()
     {
         /**
          * 通过使用 instanceof操作符 和 self关键字 ，
@@ -47,6 +48,13 @@ class redis
                 }
             }
         }
+    }
+
+    /**
+     * 单例防止克隆
+     */
+    private function __clone()
+    {
     }
 
     /**
@@ -117,7 +125,7 @@ class redis
      * @param string $key //key名，默认*获取全部的key
      * @return array
      */
-    public function get_key($key = '*')
+    public function getKey($key = '*')
     {
         return $this->redis->keys($key);
     }
@@ -152,9 +160,273 @@ class redis
         }
     }
 
-    //单例防止克隆
-    private function __clone()
+    /**
+     * 插入数据到列表缓存
+     * @param $key //列表名
+     * @param $value //要插入的数据
+     * @param string $type //从列表的那一侧插入，默认左侧
+     * @return bool|mixed
+     */
+    public function insertList($key, $value, $type = 'l')
     {
+        $arr = [];
+        //先把$key存入数组第一位
+        $arr[] = $key;
+        //判断用什么方法插入列表
+        $func = $type === 'l' ? 'lPush' : 'rPush';
+        //是否插入多个数据
+        if (is_array($value)) {
+            foreach ($value as $k => $v) {
+                $v = is_array($v) ? json_encode($v) : $v;
+                $arr[] = $v;
+            }
+        } else {
+            $arr[] = $value;
+        }
+        //利用call_user_func_array函数调用redis的方法插入数据
+        return call_user_func_array([$this->redis, $func], $arr);
+    }
+
+    /**
+     * 获取列表长度
+     * @param $key //列表名
+     * @return int
+     */
+    public function getListLength($key)
+    {
+        return $this->redis->lLen($key);
+    }
+
+    /**
+     * 获取列表数据
+     * @param $key
+     * @param int $s
+     * @param int $e
+     * @return array
+     */
+    public function getList($key, $s = 0, $e = -1)
+    {
+        return $this->redis->lRange($key, $s, $e);
+    }
+
+    /**
+     * 设置哈希缓存
+     * @param $hash
+     * @param $key
+     * @param $value
+     * @return int
+     */
+    public function setHash($hash, $key, $value = null)
+    {
+        //判断key是否是数组，如果是数组就调用批量添加元素方法
+        if (is_array($key)) {
+            return $this->redis->hMset($hash, $key);
+        } else {
+            //调用单个元素添加
+            if (null !== $value) {
+                return $this->redis->hSet($hash, $key, $value);
+            } else {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 获取哈希
+     * @param $hash
+     * @param $key
+     * @return string
+     */
+    public function getHash($hash, $key)
+    {
+        //判断如果key是数组，就调用获取多个value
+        if (is_array($key)) {
+            return $this->redis->hMGet($hash, $key);
+        } else {
+            return $this->redis->hGet($hash, $key);
+        }
+    }
+
+    /**
+     * 获取哈希长度
+     * @param $hash
+     * @return int
+     */
+    public function getHashLength($hash)
+    {
+        return $this->redis->hLen($hash);
+    }
+
+    /**
+     * 删除哈希中的key
+     * @param $hash
+     * @param $key
+     * @return mixed
+     */
+    public function delectHashKey($hash, $key)
+    {
+        $arr = [];
+        $arr[] = $hash;
+        if (!is_array($key)) {
+            $arr[] = $hash;
+            $arr[] = $key;
+        } else {
+            array_unshift($key, $hash);
+            $arr = $key;
+        }
+        return call_user_func_array([$this->redis, 'hDel'], $arr);
+    }
+
+    /**
+     * 获取哈希全部的键
+     * @param $hash
+     * @return array
+     */
+    public function getHashAllKey($hash)
+    {
+        return $this->redis->hKeys($hash);
+    }
+
+    /**
+     * 获取哈希全部的值
+     * @param $hash
+     * @return array
+     */
+    public function getHashAllValue($hash)
+    {
+        return $this->redis->hVals($hash);
+    }
+
+    /**
+     * 获取哈希全部的键和值
+     * @param $hash
+     * @return array
+     */
+    public function getHashAll($hash)
+    {
+        return $this->redis->hGetAll($hash);
+    }
+
+    /**
+     * 判断哈希是否存在键域
+     * @param $hash
+     * @param $key
+     * @return bool
+     */
+    public function hashExistKey($hash, $key)
+    {
+        return $this->redis->hExists($hash, $key);
+    }
+
+    /**
+     * 增加哈希的值
+     * @param $hash
+     * @param $key
+     * @param $number
+     * @return int
+     */
+    public function increaseHashValue($hash, $key, $number)
+    {
+        return $this->redis->hIncrBy($hash, $key, $number);
+    }
+
+    /**
+     * 插入无序集合
+     * 无序集合，每次插入都可能会弄乱排序
+     * @param $key
+     * @param $value
+     * @return mixed
+     */
+    public function insertGroup($key, $value)
+    {
+        $arr = [];
+        if (!is_array($value)) {
+            $arr[] = $key;
+            $arr[] = $value;
+        } else {
+            array_unshift($value, $key);
+            $arr = $value;
+        }
+        return call_user_func_array([$this->redis, 'sAdd'], $arr);
+    }
+
+    /**
+     * 获取无序集合
+     * @param $key
+     * @return array
+     */
+    public function getGroup($key)
+    {
+        return $this->redis->sMembers($key);
+    }
+
+    /**
+     * 插入有序集合
+     * 有序集合，每次插入都根据score分数，进行排序
+     * @param $key
+     * @param $score
+     * @param $value
+     * @return int
+     */
+    public function insertOrderlyGroup($key, $score, $value)
+    {
+        return $this->redis->zAdd($key, $score, $value);
+    }
+
+    /**
+     * 获取有序集合
+     * @param $key //集合键
+     * @param int $start //开始读取位置
+     * @param int $end //结束读取位置，-1 = 最后一位
+     * @param string $sorting //升序/降序，默认
+     * @param bool $withscores //是否输出分数，默认不输出
+     * @return array
+     */
+    public function getOrderlyGroup($key, $start = 0, $end = -1, $sorting = 'desc', $withscores = false)
+    {
+        if ('desc' === $sorting) {
+            return $this->redis->zRevRange($key, $start, $end, $withscores);
+        } else {
+            return $this->redis->zRange($key, $start, $end, $withscores);
+        }
+    }
+
+    /**
+     * 监视key
+     * @param string|array $key //要监视的key，传入字符串或数组
+     * @return bool
+     */
+    public function monitorKey($key)
+    {
+        $this->redis->watch($key);
+        return true;
+    }
+
+    /**
+     * 开启事务
+     * @return \Redis
+     */
+    public function openTransaction()
+    {
+        return $this->redis->multi();
+    }
+
+    /**
+     * 提交事务
+     * 事务提交成功返回数组失败返回false
+     * @return array|bool
+     */
+    public function commitTransaction()
+    {
+        return $this->redis->exec();
+    }
+
+    /**
+     * 关闭事务
+     */
+    public function closeTransaction()
+    {
+        $this->redis->discard();
     }
 
     /**

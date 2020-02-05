@@ -2,39 +2,45 @@
 /**
  * 模型父类
  * 1.单例模式设计
- * 2.实现数据库基本操作方法
+ * 2.实现数据库基本操作
  * 作者：2daye
- * 时间：2019年 3月28日
  */
-
 namespace core\plugin;
 
 use core\tool\Tool;
 
 class Model
 {
-    //$db 存放数据库连接句柄
+    //存放数据库连接句柄
     private $db = false;
-    //SQL 拼接参数
-    private $table = null;
-    private $field = '*';
-    private $data = null;
-    private $order = '';
-    private $group = '';
-    private $having = '';
-    private $limit = '';
-    private $where = [];
-    private $join = [];
-    private $is_join = false;
-    private $parameter = null;
-    //$instance 用于存放实例化的对象
+
+    //sql拼接参数
+    public $table = '';
+    public $field = '*';
+    public $data = [];
+    public $order = '';
+    public $group = '';
+    public $having = '';
+    public $limit = '';
+    public $where = [];
+    public $join = [];
+    public $isJoin = false;
+    public $fetchSql = false;
+
+    //sql绑定查询的参数
+    public $parameter = [];
+
+    //缓存参数
+    public $cache = [];
+
+    //存放实例化的对象
     private static $instance;
 
     /**
      * 静态单例模式
      * @return Model
      */
-    public static function get_instance()
+    public static function getInstance()
     {
         /**
          * 通过使用 instanceof操作符 和 self关键字 ，
@@ -49,31 +55,13 @@ class Model
     }
 
     /**
-     * 私有构造函数，实现单例
+     * 私有构造函数，防止继承，实现单例
+     * Model constructor.
      * @throws \Exception
      */
     private function __construct()
     {
-        if (false === $this->db) {
-            //载入配置数据库配置文件
-            $dbconfig = \core\plugin\Config::get_all('db');
-            //连接数据库
-            try {
-                $this->db = new \PDO('mysql:dbname=' . $dbconfig['DB_NAME'] . ';port=' . $dbconfig['DB_PORT_NUMBER'] . ';host=' . $dbconfig['DB_HOST'] . ';', $dbconfig['DB_USER'], $dbconfig['DB_PASSWORD']);
-                $this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-                /**
-                 * 注意当使用PDO访问MySQL数据库真正的预备义语句并不是默认使用的！
-                 * 为了解决这个问题，必须禁用仿真准备好的语句。使用PDO创建连接的，如下
-                 * 设置PDO setAttribute(\PDO::ATTR_EMULATE_PREPARES, false)
-                 * 防止数据库字段属性是int，查出来变成string的， 1和'1'
-                 */
-                $this->db->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-                //申明数据库编码 UTF8
-                $this->db->exec('set names utf8');
-            } catch (\PDOException $e) {
-                throw new \Exception('数据库连接失败：' . $e->getMessage());
-            }
-        }
+
     }
 
     //单例防止克隆
@@ -83,76 +71,61 @@ class Model
 
     /**
      * 数据库插入方法
-     * @param array|null $array //要插入的字段和值
-     * @return int
+     * @param array|null $array
+     * @return array|int
      * @throws \Exception
      */
-    public function insert(array $array = null)
+    public function insert(array $array = [])
     {
-        //判断是否传入表名
-        if ($this->table === null) {
-            throw new \Exception('请传入要插入数据的表');
-        }
-        //判断要插入的数据是否组装完成
-        if (null === $array) {
-            if (null === $this->data) {
-                throw new \Exception('请传入要插入的数据');
-            }
-        } else {
-            $this->data($array);
-        }
+        //sql执行前初始化
+        $this->sqlInit('insert', $array);
         //获取字段和值
         $field = $this->data['field'];
         $value = $this->data['value'];
         //编译sql
-        $_sql = "insert into " . $this->table . "(" . $field . ") values (" . $value . ")";
-        //执行返回结果
-        return $this->cud($_sql, $this->parameter);
+        $sql = "INSERT INTO " . $this->table . "(" . $field . ") VALUES (" . $value . ")";
+        //执行sql返回结果
+        return $this->performSql($sql, 0);
     }
 
     /**
      * 数据库删除方法
-     * @param bool $where //判断条件是否存在
-     * @return int
+     * @param bool $where
+     * @return array|int
      * @throws \Exception
      */
     public function delete($where = false)
     {
-        //判断是否传入表名
-        if ($this->table === null) {
-            throw new \Exception('请传入要插入数据的表');
-        }
-        if (0 === count($where) && $where === true) {
+        //sql执行前初始化
+        $this->sqlInit('delete');
+        /**
+         * 当删除数据的时候
+         * 如果where条件为空
+         * 那必须在delete方法里面传入true才能执行整个数据表的删除
+         */
+        if (!count($this->where) && $where) {
             $w = '';
+        } elseif (count($this->where) > 0) {
+            $w = implode(' ', $this->where);
         } else {
-            $w = $this->where;
+            throw new \Exception('删除指令终止，没有where条件，异常危险的删除操作，请检查确认');
         }
         //编译sql
-        $_sql = "delete from " . $this->table . $w;
-        //执行返回结果
-        return $this->cud($_sql, $this->parameter);
+        $sql = "DELETE FROM " . $this->table . $w;
+        //执行sql返回结果
+        return $this->performSql($sql, 0);
     }
 
     /**
      * 数据库更新操作
-     * @param array|null $array //要更新的字段和参数
-     * @return int
+     * @param array|null $array
+     * @return array|int
      * @throws \Exception
      */
-    public function update(array $array = null)
+    public function update(array $array = [])
     {
-        //判断是否传入表名
-        if ($this->table === null) {
-            throw new \Exception('请传入要插入数据的表');
-        }
-        //判断要插入的数据是否组装完成
-        if (null === $array) {
-            if (null === $this->data) {
-                throw new \Exception('请传入要更新的数据');
-            }
-        } else {
-            $this->data($array);
-        }
+        //sql执行前初始化
+        $this->sqlInit('update', $array);
         //获取字段和值
         $field = explode(',', $this->data['field']);
         $value = explode(',', $this->data['value']);
@@ -164,9 +137,9 @@ class Model
         //去除update参数的尾部的，号
         $u_val = trim($u, ',');
         //编译sql
-        $_sql = "update " . $this->table . " set " . $u_val . $this->where;
-        //执行返回结果
-        return $this->cud($_sql, $this->parameter);
+        $sql = "UPDATE " . $this->table . " SET " . $u_val . implode(' ', $this->where);
+        //执行sql返回结果
+        return $this->performSql($sql, 0);
     }
 
     /**
@@ -175,103 +148,167 @@ class Model
      * @return array|int
      * @throws \Exception
      */
-    public function select($result_type = true)
+    public function select($resultType = true)
     {
-        //判断是否传入表名
-        if ($this->table === null) {
-            throw new \Exception('请传入要插入数据的表');
-        }
+        //sql执行前初始化
+        $this->sqlInit('select');
         //编译sql
-        $_sql = "select " . $this->field . " from " . $this->table . implode(' ', $this->join) . implode(' ', $this->where) . $this->order . $this->limit;
-        //Tool::p($this->parameter);
-        //Tool::p($_sql, true);
-        //执行返回结果
-        return $result_type ? $this->get_all_result($_sql, $this->parameter) : $this->get_all_number($_sql, $this->parameter);
+        $sql = "SELECT " . $this->field . " FROM " . $this->table . implode(' ', $this->join) . implode(' ', $this->where) . $this->order . $this->limit;
+        //判断是否使用缓存
+        if (count($this->cache) > 0) {
+            $cache = new Cache();
+            $key = $this->cache['key'] !== false ? $this->cache['key'] : md5($sql . implode(',', $this->parameter));
+            $data = $cache->get($key);
+            if ($data !== false) {
+                //重置缓存参数
+                $this->cache = [];
+                //重置全部条件参数
+                $this->resetCondition();
+                //返回缓存数据
+                return $data;
+            } else {
+                //执行sql返回结果
+                $result = $this->performSql($sql, ($resultType ? 1 : 0));
+                $cache->set($key, $result, $this->cache['ttl']);
+                $this->cache = [];
+                return $result;
+            }
+        } else {
+            //执行sql返回结果
+            return $this->performSql($sql, ($resultType ? 1 : 0));
+        }
     }
 
     /**
-     * 数据库(增(Create)，改(Update)，删(Delete))操作
-     * @param string $_sql //传入sql语句
-     * @param array $parameter //绑定参数数组
-     * @return int //数据库影响条数
-     */
-    public function cud($_sql, array $parameter)
-    {
-        //传入sql执行
-        $results = $this->db->prepare($_sql);
-        //传入查询参数
-        $results->execute($parameter);
-        //返回数据库受影响行数，int型
-        $ImpactNumber = $results->rowCount();
-        //返回结果
-        return $ImpactNumber;
-    }
-
-    /**
-     * 获得数据库查询的全部结果
-     * @param string $_sql //传入sql语句
-     * @param array $parameter //绑定参数数组
-     * @param int $type //返回查询结果的类型 0 => 结果数组 1 => 结果数量
-     * @return array|int
+     * sql初始化
+     * @param $operation //哪种sql
+     * @param array $array //执行数据
+     * @return bool
      * @throws \Exception
      */
-    public function get_all_result($_sql, array $parameter, $type = 0)
+    public function sqlInit($operation, $array = [])
     {
+        //判断是否传入表名
+        if ('' == $this->table) {
+            throw new \Exception('error：必须传入要操作的表');
+        }
+        //执行每种不同的sql的，不同操作
+        switch ($operation) {
+            case 'insert':
+            case 'update':
+                //如果update的数组有值，优先使用
+                if (count($array)) {
+                    $this->data($array);
+                } else {
+                    if (0 === count($this->data)) {
+                        throw new \Exception('error：没有传入可执行的数据，请检查');
+                    }
+                }
+                break;
+            case 'delete':
+            case 'select':
+                //删除查询暂无前置特别处理
+                break;
+        }
+        return true;
+    }
+
+    /**
+     * 执行sql返回结果
+     * @param $sql //sql语句
+     * @param int $resultType //执行后返回的类型
+     * @param bool $data //默认返回值
+     * @return array|bool|int
+     * @throws \Exception
+     */
+    public function performSql($sql, $resultType = 0, $data = false)
+    {
+        //判断是否连接数据库
+        if (false === $this->db) {
+            //获取数据库配置
+            $dbConfig = \core\plugin\Config::get_all('db');
+            //开始尝试连接数据库
+            try {
+                $this->db = new \PDO('mysql:dbname=' . $dbConfig['DB_NAME'] . ';port=' . $dbConfig['DB_PORT_NUMBER'] . ';host=' . $dbConfig['DB_HOST'] . ';', $dbConfig['DB_USER'], $dbConfig['DB_PASSWORD']);
+                $this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                /**
+                 * 注意当使用PDO访问MySQL数据库真正的预备义语句并不是默认使用的！
+                 * 为了解决这个问题，必须禁用仿真准备好的语句。使用PDO创建连接的，如下
+                 * 设置PDO setAttribute(\PDO::ATTR_EMULATE_PREPARES, false)
+                 * 防止数据库字段属性是int，查出来变成string的，1/'1'
+                 */
+                $this->db->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+                //申明数据库编码UTF-8
+                $this->db->exec('set names utf8');
+            } catch (\PDOException $e) {
+                //连接失败输出错误
+                throw new \Exception('数据库连接失败：' . $e->getMessage());
+            }
+        }
+
+        //是否直接返回sql
+        if ($this->fetchSql) {
+            return ['parameter' => $this->parameter, 'sql' => $sql];
+        }
         //传入sql执行
-        $results = $this->db->prepare($_sql);
+        $result = $this->db->prepare($sql);
         //传入查询参数
-        $results->execute($parameter);
-        //判断返回类型
-        switch ($type) {
-            //使用PDO::FETCH_ASSOC，返回结果集，以数组形式返回
+        $result->execute($this->parameter);
+        //执行sql
+        switch ($resultType) {
             case 0:
+                //返回数据库受影响行数，以int返回
+                $data = $result->rowCount();
+                break;
+            case 1:
+                //返回结果集，使用PDO::FETCH_ASSOC，以数组返回
                 $data = array();
-                while ($row = $results->fetch(\PDO::FETCH_ASSOC)) {
+                while ($row = $result->fetch(\PDO::FETCH_ASSOC)) {
                     $data[] = $row;
                 }
                 break;
-            //获取条数，返回int型
-            case 1:
-                $data = $results->rowCount();
-                break;
-            default:
-                throw new \Exception('请传入正确的返回类型 $type 0 => 结果数组 1 => 结果数量');
         }
+        //重置全部条件参数
+        $this->resetCondition();
         //返回结果
         return $data;
     }
 
     /**
      * 清空数据表，自增id重置
-     * @param string $table //要清空的表
      * @return int
      */
-    public function truncate($table)
+    public function truncate()
     {
-        $_sql = "truncate " . $table;
-        //执行返回结果
-        return $this->cud($_sql, array());
+        //sql执行前初始化
+        $this->sqlInit('truncate');
+        //编译sql
+        $sql = "truncate " . $this->table;
+        //执行sql返回结果
+        return $this->performSql($sql);
     }
 
     /**
-     * 获取数据库当前线程最后插入数据的自增id
+     * 返回最后插入行的ID或序列值(当前线程)
      * @return string
      */
-    public function last_id()
+    public function lastId()
     {
         return $this->db->lastInsertId();
     }
 
     /**
-     * 锁定表
-     * @param $table //要锁的表
+     * 锁定表 write
      * @return int
      */
-    public function lock_table($table)
+    public function lockTable()
     {
-        $_sql = "lock tables " . $table . " write";
-        $result = $this->db->exec($_sql);
-        return $result;
+        //sql执行前初始化
+        $this->sqlInit('lockTable');
+        //编译sql
+        $sql = "lock tables " . $this->table . " write";
+        //执行sql返回结果
+        return $this->db->exec($sql);
     }
 
     /**
@@ -280,42 +317,34 @@ class Model
      */
     public function unlock()
     {
-        $_sql = "unlock tables";
-        $result = $this->db->exec($_sql);
-        return $result;
+        return $this->db->exec('unlock tables');
     }
 
     /**
      * 开启事务处理
      * @return int
      */
-    public function open_transaction()
+    public function openTransaction()
     {
-        $_sql = "begin";
-        $result = $this->db->exec($_sql);
-        return $result;
+        return $this->db->exec('begin');
     }
 
     /**
-     * 成功提交事务
+     * 提交事务
      * @return int
      */
     public function commit()
     {
-        $_sql = "commit";
-        $result = $this->db->exec($_sql);
-        return $result;
+        return $this->db->exec('commit');
     }
 
     /**
      * 事务回滚
      * @return int
      */
-    public function roll_back()
+    public function rollBack()
     {
-        $_sql = "ROLLBACK";
-        $result = $this->db->exec($_sql);
-        return $result;
+        return $this->db->exec('ROLLBACK');
     }
 
     /**
@@ -352,11 +381,9 @@ class Model
         //循环处理字段数组和值数组
         foreach ($array as $key => $value) {
             //去除冒号得到字段
-            $field[] = trim($key, ':');
+            $field[] = $key;
             //拼接SQL绑定参数占位符数组
-            $val[] = $key;
-            //传入绑定参数数组
-            $this->parameter[$key] = $value;
+            $val[] = $this->setParameter($key, $value);
         }
         //implode()函数把数组按(,号)分成字符串
         $vals = implode(",", $val);
@@ -369,99 +396,97 @@ class Model
 
     /**
      * 处理where条件
-     * [':UserId' => ['UserId' => 1],':PassWord'=>['PassWord' => 123456]]
-     * @param $where
-     * @param null $expression
-     * @param null $condition
-     * @param string $link
-     * @return $this
+     * @param $where //字符串：'id'，数组：['id' => 1, 'name' => '2daye', 'state' => [1, 2, 3]]
+     * @param null $expression //字符串：'='/'<>'/'like'/'null'/
+     * @param null $condition //字符串：'2daye'，数组：['2019', '2020']
+     * @param null $link //字符串：/'OR'/'AND'
+     * @return Model
      */
     public function where($where, $expression = null, $condition = null, $link = null)
     {
-        $type = 'AND';
-        /**
-         * 获取方法传入的参数
-         * 使用func_get_args()函数
-         */
-        $parameters = func_get_args();
-        //判断where数组是否是第一个where条件，第一个where条件不需要加AND
-        $AND = count($this->where) != 0 ? ' ' . $type . ' (' : ' WHERE (';
-        return $this->handling_where($where, $expression, $condition, $link, $parameters, $AND, $type = 'AND');
+        //执行处理where条件，使用func_get_args()函数，获取函数参数列表的数组
+        return $this->handlingWhere($where, $expression, $condition, $link, func_get_args(), 'AND');
     }
 
+    /**
+     * 拼接OR where条件
+     * @param $where //字符串：'id'，数组：['id' => 1, 'name' => '2daye', 'state' => [1, 2, 3]]
+     * @param null $expression //字符串：'='/'<>'/'like'/'null'/
+     * @param null $condition //字符串：'2daye'，数组：['2019', '2020']
+     * @param null $link //字符串：/'OR'/'AND'
+     * @return Model
+     */
     public function where_or($where, $expression = null, $condition = null, $link = null)
     {
-        $type = 'OR';
-        /**
-         * 获取方法传入的参数
-         * 使用func_get_args()函数
-         */
-        $parameters = func_get_args();
-        //判断where数组是否是第一个where条件，第一个where条件不需要加AND
-        $AND = count($this->where) != 0 ? ' ' . $type . ' (' : ' WHERE (';
-        return $this->handling_where($where, $expression, $condition, $link, $parameters, $AND, $type);
+        //执行处理where条件，使用func_get_args()函数，获取函数参数列表的数组
+        return $this->handlingWhere($where, $expression, $condition, $link, func_get_args(), 'OR');
     }
 
-    public function handling_where($where, $expression, $condition, $link, $parameters, $AND, $type)
+    /**
+     * 处理where条件逻辑
+     * @param $where //条件可以是字符串，数组 'id' ['id'=>1,'name'=>'2daye']
+     * @param $expression //可以是表达式，可以是值
+     * @param $condition //值，字符串或数组
+     * @param $link //链接字符串，OR或者AND
+     * @param $parameters //参数个数
+     * @param $head //条件头部连接
+     * @param $andOr //条件连接
+     * @return $this
+     * @throws \Exception
+     */
+    public function handlingWhere($where, $expression, $condition, $link, $whereParameter, $andOr)
     {
+        //根据where数组个数判断条件连接头是AND/OR还是WHERE
+        $head = count($this->where) > 0 ? $andOr . ' (' : ' WHERE (';
         /**
          * 判断传入方法参数的个数
          * 1个参数就执行，(where条件数组处理)(如果不是数组直接执行字符串where条件操作)
          * 2个参数就执行，(字段 = 条件)
          * 3个参数就执行，(字段 表达式 条件)
          */
-        switch (count($parameters)) {
+        switch (count($whereParameter)) {
             case 1:
                 //判断是否是数组
                 if (is_array($where)) {
                     //是数组进行解析
-                    $i = 0;
+                    $i = false;
                     foreach ($where as $key => $value) {
                         //判断条件是否是数组
                         if (is_array($value)) {
-                            //是数组处理为 字段 in(1,2,3)
+                            //是数组就处理成IN(1,2,3)来进行查询
                             $p = '';
                             foreach ($value as $k => $v) {
-                                $parameter = $this->is_join ? $this->get_parameter($key) : $key;
-                                $p .= $parameter . $k . ',';
-                                $this->parameter[$parameter . $k] = $v;
+                                $p .= $this->setParameter($key, $v) . ',';
                             }
-                            $this->where[] = $AND . trim($key, ':') . ' IN (' . trim($p, ',') . ')';
+                            $this->where[] = ($i ? $andOr . ' ' : $head) . $key . ' IN (' . trim($p, ',') . ')';
                         } else {
                             //不是数组直接处理为 字段 = 条件
-                            if ($i > 0) {
-                                $AND = ' ' . $type . ' ';
-                            }
-                            $parameter = $this->is_join ? $this->get_parameter($key) : $key;
-                            $this->where[] = $AND . trim($key, ':') . ' = ' . $parameter;
-                            $this->parameter[$parameter] = $value;
-                            $i++;
+                            $this->where[] = ($i ? $andOr . ' ' : $head) . $key . ' = ' . $this->setParameter($key, $value);
                         }
+                        $i = true;
                     }
                 } else {
                     //不是数组直接输where条件
-                    $this->where[] = $AND . $where;
+                    $this->where[] = $head . $where;
                 }
-                $this->where[] = ')';
                 break;
             case 2:
                 /**
                  * 判断参数是否是特殊值
-                 * 1.null和'null' 处理字段 is null
-                 * 2.'not null' 处理字段 is not null
+                 * 1.null 处理字段 is null
+                 * 2.not null 处理字段 is not null
                  * 3.不是特殊值，则处理为 字段 = 值
                  */
                 switch ($expression) {
-                    case null:
+                    /*case null:*/
                     case 'null':
-                        $this->where[] = $AND . trim($where, ':') . ' IS NULL ';
+                        $this->where[] = $head . $where . ' IS NULL';
                         break;
                     case 'not null':
-                        $this->where[] = $AND . trim($where, ':') . ' IS NOT NULL ';
+                        $this->where[] = $head . $where . ' IS NOT NULL';
                         break;
                     default:
-                        $this->where[] = $AND . trim($where, ':') . ' = ' . $where;
-                        $this->parameter[$where] = $expression;
+                        $this->where[] = $head . $where . ' = ' . $this->setParameter($where, $expression);
                 }
                 break;
             case 3:
@@ -474,69 +499,61 @@ class Model
                     case '<':
                     case '>=':
                     case '<=':
-                        $parameter = $this->is_join ? $this->get_parameter($where) : $where;
-                        $this->where[] = $AND . trim($where, ':') . ' ' . $expression . ' ' . $parameter;
-                        $this->parameter[$parameter] = $condition;
+                        $this->where[] = $head . $where . ' ' . $expression . ' ' . $this->setParameter($where, $condition);
                         break;
                     case 'like':
                         if (is_array($condition)) {
-                            $parameter = $this->is_join ? $this->get_parameter($where) : $where;
-                            $cca = '';
+                            //多个like搜索条件如果有传拼接方法就使用传入的否则默认AND
+                            $k = isset($link) ? $link : 'AND';
+                            //循环拼接搜索条件，第四个参数$link，
+                            $search = '';
                             foreach ($condition as $key => $value) {
-                                $cca .= $link . ' ' . trim($where, ':') . ' LIKE "' . $parameter . $key . '"';
-                                $this->parameter[$parameter . $key] = $value;
+                                $parameter = $this->setParameter($where, $value);
+                                $search .= ' ' . $k . ' ' . $where . ' LIKE "' . $parameter . '"';
                             }
-                            $cca = trim($cca, $link);
-                            $this->where[] = $AND . '(' . $cca . ')';
+                            $search = trim($search, ' ' . $k . ' ');
+                            $this->where[] = $head . $search;
                         } else {
-                            $parameter = $this->is_join ? $this->get_parameter($where) : $where;
-                            $this->where[] = $AND . trim($where, ':') . ' LIKE "' . $parameter . '"';
-                            $this->parameter[$parameter] = $condition;
+                            $parameter = $this->setParameter($expression, $condition);
+                            $this->where[] = $head . ' ' . $where . ' LIKE "' . $parameter . '"';
                         }
                         break;
                     case 'between':
+                    case 'not between':
                         if (!is_array($condition)) {
-                            throw new \Exception('between条件异常，请检查第三个参数，标准参数格式 例：数组[1,2]');
+                            throw new \Exception('between条件异常，请检查第三个参数，标准参数格式，数组[2019,2020]');
                         }
-                        $parameter = $this->is_join ? $this->get_parameter($where) : $where;
-                        $this->where[] = $AND . trim($where, ':') . ' BETWEEN ' . $parameter . '1 AND ' . $parameter . '2';
-                        $this->parameter[$parameter . '1'] = $condition[0];
-                        $this->parameter[$parameter . '2'] = $condition[1];
+                        $parameter = $this->setParameter($where, $condition[0]);
+                        $parameters = $this->setParameter($where, $condition[1]);
+                        $between = $expression == 'between' ? ' BETWEEN ' : ' NOT BETWEEN ';
+                        $this->where[] = $head . $where . $between . $parameter . ' AND ' . $parameters;
                         break;
                     case 'in':
                         if (!is_array($condition)) {
-                            throw new \Exception('in条件异常，请检查第三个参数，标准参数格式 例：数组[1,2,3]');
+                            throw new \Exception('in条件异常，请检查第三个参数，标准参数格式，数组[1, 2, 3]');
                         }
-                        $parameter = $this->is_join ? $this->get_parameter($where) : $where;
-                        $in_condition = '';
+                        $inCondition = '';
                         foreach ($condition as $key => $value) {
-                            $in_condition .= $parameter . $key . ',';
-                            $this->parameter[$parameter . $key] = $value;
+                            $inCondition .= $this->setParameter($where, $condition[$key]) . ',';
                         }
-                        $in_condition = trim($in_condition, ',');
-                        $this->where[] = $AND . trim($where, ':') . ' IN (' . $in_condition . ')';
+                        $inCondition = trim($inCondition, ',');
+                        $this->where[] = $head . $where . ' IN (' . $inCondition . ')';
                         break;
-                    case 'nat':
-                        $parameter = $this->is_join ? $this->get_parameter($condition) : $condition;
-                        $this->where[] = $AND . trim($where, ':') . ' = ' . $parameter;
-                        break;
+                    default:
+                        $this->where[] = $head . $where . ' = ' . $this->setParameter($where, $expression);
                 }
                 break;
         }
+        /**
+         * where条件组括号收尾处理
+         * 先获取where条件数组最后一位
+         * 在获取where最后一位的key，索引
+         * 拼接括号
+         */
+        $element = end($this->where);
+        $key = key($this->where);
+        $this->where[$key] = $element . ')';
         return $this;
-    }
-
-    /**
-     * 如果使用了join链表查询的时候，参数会出现:user.id
-     * 绑定参数遇到.的时候回报错，所以这里进行处理
-     * @param $parameter
-     * @return string
-     */
-    public function get_parameter($parameter)
-    {
-        $arr = explode('.', $parameter);
-        $parameter = end($arr);
-        return ':' . $parameter;
     }
 
     /**
@@ -592,12 +609,8 @@ class Model
      */
     public function limit($start, $length = null)
     {
-        /**
-         * 获取方法传入的参数
-         * 使用func_get_args()函数
-         */
-        $parameters = func_get_args();
-        switch (count($parameters)) {
+        //使用func_get_args()函数，获取方法传入的函数参数列表的数组
+        switch (count(func_get_args())) {
             case 1:
                 $this->limit = ' limit ' . $start;
                 break;
@@ -615,14 +628,15 @@ class Model
      * @param $on
      * @param string $type
      */
-    public function join($table, $on, $type = ' INNER JOIN ')
+    public function join($table, $on, $type = 'INNER')
     {
+        $type = ' ' . $type . ' JOIN ';
         if (is_array($table)) {
             $this->join[] = $type . $table[0] . ' as ' . $table[1] . ' ON ' . $on;
         } else {
             $this->join[] = $type . $table . ' ON ' . $on;
         }
-        $this->is_join = true;
+        $this->isJoin = true;
         return $this;
     }
 
@@ -632,10 +646,9 @@ class Model
      * @param $table
      * @param $on
      */
-    public function left_join($table, $on)
+    public function leftJoin($table, $on)
     {
-        $type = ' LEFT JOIN ';
-        return $this->join($table, $on, $type);
+        return $this->join($table, $on, 'LEFT');
     }
 
     /**
@@ -644,10 +657,9 @@ class Model
      * @param $table
      * @param $on
      */
-    public function right_join($table, $on)
+    public function rightJoin($table, $on)
     {
-        $type = ' RIGHT JOIN ';
-        return $this->join($table, $on, $type);
+        return $this->join($table, $on, 'RIGHT');
     }
 
     /**
@@ -656,9 +668,94 @@ class Model
      * @param $table
      * @param $on
      */
-    public function full_join($table, $on)
+    public function fullJoin($table, $on)
     {
-        $type = ' FULL JOIN ';
-        return $this->join($table, $on, $type);
+        return $this->join($table, $on, 'FULL');
+    }
+
+    /**
+     * SQL调试
+     * @param bool $is
+     * @return $this
+     */
+    public function fetchSql($is = false)
+    {
+        $this->fetchSql = $is;
+        return $this;
+    }
+
+    /**
+     * 重置SQL参数
+     */
+    public function resetCondition()
+    {
+        $this->table = '';
+        $this->field = '*';
+        $this->data = [];
+        $this->order = '';
+        $this->group = '';
+        $this->having = '';
+        $this->limit = '';
+        $this->where = [];
+        $this->join = [];
+        $this->isJoin = false;
+        $this->fetchSql = false;
+        $this->parameter = [];
+    }
+
+    /**
+     * 设置绑定参数
+     * @param $field //字段
+     * @param $value //值
+     * @return string //返回绑定参数的key
+     */
+    public function setParameter($field, $value)
+    {
+        //如果当前是连表查询，就会存在user.id这种字段，这种字段作为key会报错，所以我们就取原始的字段
+        if ($this->isJoin) {
+            $field = explode('.', $field);
+            $field = end($field);
+        }
+        //获取绑定参数数组当前的个数
+        $currentNumber = count($this->parameter);
+        //如果，有多个参数 或 key已经存在绑定参数数组，就进行去重复处理
+        if ($currentNumber > 0 || array_key_exists(':' . $field, $this->parameter)) {
+            //把绑定参数数组的长度传入$i，这样可以避免算法循环多次判定都出现重复
+            $i = $currentNumber;
+            while (true) {
+                $i++;
+                if (!array_key_exists(':' . $field . $i, $this->parameter)) {
+                    $field = ':' . $field . $i;
+                    break;
+                }
+            }
+        } else {
+            $field = ':' . $field;
+        }
+        $this->parameter[$field] = $value;
+        return $field;
+    }
+
+    /**
+     * 查询缓存
+     * @param $key
+     * @param null $ttl
+     * @return $this
+     */
+    public function cache($key, $ttl = null)
+    {
+        switch (count(func_get_args())) {
+            case 1:
+                if ($key === true) {
+                    $this->cache = ['key' => false, 'ttl' => $ttl];
+                } else {
+                    $this->cache = ['key' => false, 'ttl' => $key];
+                }
+                break;
+            case 2:
+                $this->cache = ['key' => $key, 'ttl' => $ttl];
+                break;
+        }
+        return $this;
     }
 }

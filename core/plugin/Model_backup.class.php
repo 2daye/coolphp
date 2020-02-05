@@ -1,13 +1,14 @@
 <?php
-/*
+/**
  * 模型父类
  * 单例数据库连接
  * 数据库基本操作
- * */
+ */
 namespace core\plugin;
 
 class Model
 {
+    //存放数据库的实例
     private $db = false;
 
     //定义$instance用于存放实例化的对象

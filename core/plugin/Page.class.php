@@ -15,46 +15,44 @@ namespace core\plugin;
 class Page
 {
     //sql语句中的limit
-    private $limit;
+    public $limit = [];
     //每页的数据条数
-    private $listRows;
+    public $listRows;
     //当前页
-    private $page;
+    public $page;
     //总记录数
     private $total;
     //总页数
-    private $pageNum;
+    public $pageNum;
 
-    private $num;
-    private $url;
-    private $config = array('prev' => "«", "next" => "»");
+    public $num;
+    public $url;
+    public $config = ['prev' => "«", "next" => "»"];
 
-    public function __construct($_total, $_listRows, $_num = 3)
+    public function __construct($_total, $_listRows, $page, $num = 3)
     {
-        $this->num = $_num;
+        //第几页
+        $this->page = $page;
+        //展示几个
+        $this->num = $num;
         //从外部传入总记录数
         $this->total = $_total;
-        //每页的条数由外部传入;
+        //每页的条数由外部传入
         $this->listRows = $_listRows;
         //总页数
         $this->pageNum = ceil($this->total / $this->listRows);
         //处理页数范围
-        $this->handlePage();
-        //分页公式;
-        $this->limit = " limit " . ($this->page - 1) * $this->listRows . "," . $this->listRows;
+        $this->handlePage($page);
+        //分页公式
+        $this->limit = [($this->page - 1) * $this->listRows, $this->listRows];
+        //获取url
         $this->url = $this->reWrite();
     }
 
-    public function __set($_value, $_key)
-    {
-        $this->$_key = $_value;
-    }
-
-    public function __get($_key)
-    {
-        return $this->$_key;
-    }
-
+    /**
+     * get url
+     * @return null|string
+     */
     private function reWrite()
     {
         $newURL = null;
@@ -99,10 +97,9 @@ class Page
     }
 
     /**
-     * 重新设置config的值;
-     *
-     * @param string $_key
-     * @param string $_value
+     * 重新设置config的值
+     * @param $_key
+     * @param $_value
      */
     public function setConfig($_key, $_value)
     {
@@ -115,13 +112,11 @@ class Page
 
     /**
      * 处理页数范围
-     *
-     * 页数小于1时等于1；页数大于最大值时等于最大值；
-     *   */
-    private function handlePage()
+     * 页数小于1时等于1,页数大于最大值时等于最大值
+     */
+    private function handlePage($page)
     {
-        //$_GET['page']默认值为1;
-        $this->page = !empty($_GET['page']) ? $_GET['page'] : 1;
+        $this->page = $page;
         if ($this->page > $this->pageNum) {
             $this->page = $this->pageNum;
         }
@@ -130,6 +125,9 @@ class Page
         }
     }
 
+    /**
+     * @return int
+     */
     public function listRowsBegin()
     {
         return ($this->page - 1) * $this->listRows + 1;
@@ -137,7 +135,7 @@ class Page
 
     /**
      * 首页
-     * @return string
+     * @return null|string
      */
     private function first()
     {
@@ -155,7 +153,7 @@ class Page
 
     /**
      * 前一页
-     * @return string
+     * @return null|string
      */
     private function prev()
     {
@@ -168,6 +166,9 @@ class Page
         return $str;
     }
 
+    /**
+     * @return string
+     */
     private function pageList()
     {
         $prev = null;
@@ -203,8 +204,8 @@ class Page
     }
 
     /**
-     * 下一页:当前页+1
-     * @return string
+     * 下一页:当前页 + 1
+     * @return null|string
      */
     private function next()
     {
@@ -219,10 +220,8 @@ class Page
 
     /**
      * 显示末页
-     *
      * 如果到了最后一页，末页不可以点击;不到最后一页，末页可以点击
-     *
-     * @return string $str：返回字符串
+     * @return null|string 返回字符串
      */
     private function end()
     {
@@ -241,7 +240,7 @@ class Page
 
     /**
      * 页数的select跳转
-     * @return string
+     * @return null|string
      */
     private function select()
     {
@@ -272,6 +271,10 @@ class Page
         return $str;
     }
 
+    /**
+     * 跳转指定页数
+     * @return null|string
+     */
     private function jump()
     {
         $str = null;

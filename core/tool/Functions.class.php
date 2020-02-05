@@ -105,7 +105,7 @@ class Functions
      * @param null $str //返回提示内容
      * @param int $prior //返回前几页
      */
-    public static function goPrior($str = null, $prior = -1)
+    public static function go_prior($str = null, $prior = -1)
     {
         if ($str === null) {
             echo "<script>history.go(" . $prior . ");</script>";
@@ -230,8 +230,8 @@ class Functions
                 break;
             case 'delete':
                 if ($session_name !== null) {
-                    if (isset($sessionName)) {
-                        unset($_SESSION[$sessionName]);
+                    if (isset($session_name)) {
+                        unset($_SESSION[$session_name]);
                         return true;
                     } else {
                         return false;
@@ -271,78 +271,7 @@ class Functions
     }
 
     /**
-     * 得到文件后缀名
-     * @param $file //文件的名字
-     * @return mixed
-     */
-    public static function getFileSuffix($file)
-    {
-        return end(explode('.', $file));
-    }
-
-    /**
-     * 压缩html文件
-     * @param $html //要压缩的文件
-     * @param int $compress_way //选择压缩的方式
-     * @return mixed|string
-     */
-    public static function compressHtml($html, $compress_way = 1)
-    {
-        $html_string = file_get_contents(ROOT_PATH . '/core/app/' . $html);
-        $string = '';
-        switch ($compress_way) {
-            case 1:
-                $string = preg_replace("~>\s+<~", "><", preg_replace("~>\s+\r\n~", ">", $html_string));
-                break;
-            case 2:
-                $string = ltrim(
-                    rtrim(
-                        preg_replace(
-                            array("/> *([^ ]*) *</", "//", "'/\*[^*]*\*/'", "/\r\n/", "/\n/", "/\t/", '/>[ ]+</'),
-                            array(">\\1<", '', '', '', '', '', '><'),
-                            $html_string
-                        )
-                    )
-                );
-                break;
-            case 3:
-                //清除换行符
-                $string = str_replace("\r\n", '', $html_string);
-                //清除换行符
-                $string = str_replace("\n", '', $string);
-                //清除制表符
-                $string = str_replace("\t", '', $string);
-                $pattern = array(
-                    //去掉注释标记
-                    "/> *([^ ]*) *</",
-                    "/[\s]+/",
-                    "/<!--[^!]*-->/",
-                    "/\" /",
-                    "/ \"/",
-                    "'/\*[^*]*\*/'"
-                );
-                $replace = array(
-                    ">\\1<",
-                    " ",
-                    "",
-                    "\"",
-                    "\"",
-                    ""
-                );
-                $string = preg_replace($pattern, $replace, $string);
-                break;
-            default:
-                if (DEBUG) {
-                    self::debug('请传入正确的压缩方式，int 1 只压缩html，int 2 全部压缩包html页面中的js jq，int 3 强效压缩');
-                } else {
-                    self::show404();
-                }
-        }
-        return $string;
-    }
-
-    /**
-     * 输出浏览器404
+     * 浏览器输出404
      */
     public static function show404()
     {
@@ -352,66 +281,55 @@ class Functions
     }
 
     /**
-     * 加密get参数
-     * @param $url //要加密的get url
-     * @param $key //加密混淆key
-     * @return string
+     * 返回RESTful风格
+     * @param $statusCode
+     * @param string $message
+     * @param array $data
      */
-    public static function encryptionGet($url, $key)
+    public static function return_rest_ful($statusCode, $message = '', $data = [])
     {
-        $encrypt_key = md5(mt_rand(0, 100));
-        $ctr = 0;
-        $tmps = "";
-        for ($i = 0; $i < strlen($url); $i++) {
-            if ($ctr == strlen($encrypt_key))
-                $ctr = 0;
-            $tmps .= substr($encrypt_key, $ctr, 1) . (substr($url, $i, 1) ^ substr($encrypt_key, $ctr, 1));
-            $ctr++;
+        //建立RESTful风格的返回格式
+        $result = ['status' => $statusCode, 'message' => $message, 'data' => $data];
+        //默认状态码对应的消息
+        $httpStatus = [
+            200 => '成功',
+            400 => '请求参数错误',
+            401 => '请登录验证身份',
+            403 => '拒绝请求',
+            404 => '资源不存在',
+            500 => '处理失败'
+        ];
+        /**
+         * 根据请求的参数个数不同，进行不同的处理方式
+         * 只传入一个状态码，$message就获取默认的，$data处理为空
+         * 只传入一个状态码和一个数据，$message就获取默认的，$message赋值给$data
+         * 三个参数都传，就正常进行返回
+         */
+        switch (count(func_get_args())) {
+            case 1:
+                unset($result['data']);
+                $result['message'] = isset($httpStatus[$statusCode]) ? $httpStatus[$statusCode] : '未知消息';
+                break;
+            case 2:
+                if (!is_array($message)) {
+                    unset($result['data']);
+                } else {
+                    $result['data'] = $message;
+                    $result['message'] = isset($httpStatus[$statusCode]) ? $httpStatus[$statusCode] : '未知消息';
+                }
+                break;
         }
-        $encrypt_key = md5($key);
-        $ctr = 0;
-        $tmp = "";
-        for ($i = 0; $i < strlen($tmps); $i++) {
-            if ($ctr == strlen($encrypt_key))
-                $ctr = 0;
-            $tmp .= substr($tmps, $i, 1) ^ substr($encrypt_key, $ctr, 1);
-            $ctr++;
-        }
-        return rawurlencode(base64_encode($tmp));
+        //返回结果
+        self::json($result);
     }
 
     /**
-     * 解密get参数
-     * @param $string //要解密的字符串
-     * @param $key //加密时使用的混淆key
-     * @return array
+     * 获取文件后缀名
+     * @param $file //文件的名字
+     * @return mixed
      */
-    public static function decryptionGet($string, $key)
+    public static function get_file_suffix($file)
     {
-        $txts = base64_decode(rawurldecode($string));
-        $encrypt_key = md5($key);
-        $ctr = 0;
-        $txt = "";
-        for ($s = 0; $s < strlen($txts); $s++) {
-            if ($ctr == strlen($encrypt_key))
-                $ctr = 0;
-            $txt .= substr($txts, $s, 1) ^ substr($encrypt_key, $ctr, 1);
-            $ctr++;
-        }
-        $strs = "";
-        for ($i = 0; $i < strlen($txt); $i++) {
-            $md5 = substr($txt, $i, 1);
-            $i++;
-            $strs .= (substr($txt, $i, 1) ^ $md5);
-        }
-        $url_array = explode('&', $strs);
-        $vars = [];
-        if (is_array($url_array)) {
-            foreach ($url_array as $var) {
-                $var_array = explode("=", $var);
-                $vars[$var_array[0]] = $var_array[1];
-            }
-        }
-        return $vars;
+        return end(explode('.', $file));
     }
 }

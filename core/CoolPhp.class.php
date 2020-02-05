@@ -48,7 +48,7 @@ class CoolPhp
         //获取使用什么方法
         $controller_action = $routing_methods;
         //判断模块存在吗
-        if (is_dir($module) && $routing_module != 'general') {
+        if (is_dir($module) && $routing_module != 'common') {
             //判断控制器文件存在吗
             if (is_file($controller_class_file)) {
                 //控制器存在直接new出控制器
@@ -56,11 +56,11 @@ class CoolPhp
                 //method_exists()判断控制器中的一个方法是否存在
                 if (method_exists($controller, $controller_action)) {
                     //把模块/控制器/操作方法名称传入Request类
-                    $request = Request::get_instance();
+                    $request = Request::getInstance();
                     $request->module = $routing_module;
                     $request->controller = $routing_controller;
                     $request->methods = $routing_methods;
-                    //方法存在执行这个方法
+                    //方法存在，就执行这个方法
                     $controller->$controller_action();
                     //打上日志，执行了什么控制器和控制器的什么方法
                     //\core\plugin\Log::log('module->' . $routing_module . '   controller->' . $routing_controller . '   methods->' . $routing_methods);
@@ -108,7 +108,7 @@ class CoolPhp
             //method_exists()判断控制器中的一个方法是否存在
             if (method_exists($controller, $controller_action)) {
                 //把控制器/操作方法名称传入Request类
-                $request = Request::get_instance();
+                $request = Request::getInstance();
                 $request->controller = $routing_controller;
                 $request->methods = $routing_methods;
                 //方法存在执行这个方法

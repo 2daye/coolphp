@@ -10,8 +10,8 @@ class IndexController extends Controller
 {
     public function main()
     {
-        parent::assign('smile', ':&nbsp;)');
-        parent::assign('welcome', '欢迎使用 CoolPhp框架 V1.0');
-        parent::display('index/view/index.html');
+        $this->assign('smile', ':&nbsp;)');
+        $this->assign('welcome', '欢迎使用 CoolPhp框架 V2.0');
+        $this->display('index/view/index.html');
     }
 }

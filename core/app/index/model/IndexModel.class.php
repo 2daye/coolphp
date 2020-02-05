@@ -2,45 +2,37 @@
 
 namespace core\app\index\model;
 
-use core\plugin\Cache;
-use core\tool\Tool;
+use core\plugin\Model;
 
 class IndexModel
 {
     private $db;
-
-    //表名
-    private $table_name = 'abc';
-
-    public $user_name;
-    public $pass_word;
+    private $table = 'abc_user';
 
     public function __construct()
     {
-        $this->db = \core\plugin\Model::get_instance();
+        $this->db = Model::getInstance();
+        $this->db->table('abc'); //表名
     }
 
     public function welcome()
     {
-        return '欢迎使用 CoolPHP框架 V1.0';
+        return '欢迎使用 CoolPHP框架 V2.0';
     }
 
-    //获得用户
-    public function get_user()
+    /**
+     * 获取用户列表（带分页）
+     * @param $num //第几个
+     * @param $number //读取几条
+     * @return array|int
+     */
+    public function userList($num, $number)
     {
-        $cache = new Cache();
-        $user = $cache->get('user');
-        if ($user) {
-            Tool::p('缓存');
-            $data = $user;
-        } else {
-            Tool::p('数据库');
-            $data = $this->db->table('ims_wei_lease_user')
-                ->where([':id' => [4, 6, 9]])
-                ->where([':status' => 1])
-                ->select();
-            $cache->set('user', $data, 5);
-        }
-        return $data;
+        return $this->db->table($this->table)
+            ->where(['state' => [0, 1]])
+            ->limit($num, $number)
+            ->order('id', 'desc')
+            ->cache(60)
+            ->select();
     }
 }

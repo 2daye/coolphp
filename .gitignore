@@ -1,2 +1,3 @@
-/vendor
-/core/cache/*
+/.docker/data/mysql
+/.docker/data/redis
+/.idea

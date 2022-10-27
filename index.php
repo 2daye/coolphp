@@ -26,7 +26,7 @@ define("ROOT_PATH", dirname(__FILE__));
 const DEBUG = true;
 
 // 加载CoolPHP框架核心类
-include ROOT_PATH . '/core/CoolPhp.class.php';
+include ROOT_PATH . '/core/CoolPhp.php';
 
 // 自动加载函数，当new一个不存在的类的时候，自动加载定义的函数
 spl_autoload_register("\\core\\CoolPhp::load");

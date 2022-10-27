@@ -1,1 +1,0 @@
-* * * * * cd /var/www && /usr/local/bin/php index.php >> /var/log/crontab.log 2>&1

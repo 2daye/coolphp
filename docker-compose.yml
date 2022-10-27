@@ -5,7 +5,8 @@ services:
     image: 2daye/nginx
     restart: always
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
     working_dir: /var/www
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -26,7 +27,7 @@ services:
     image: mysql:8.0.28
     restart: always
     ports:
-      - "33062:3306"
+      - "3306:3306"
     environment:
       MYSQL_DATABASE: database
       MYSQL_ROOT_PASSWORD: 123456
@@ -39,7 +40,7 @@ services:
     image: 2daye/redis
     restart: always
     ports:
-      - "63792:6379"
+      - "6379:6379"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./.docker/config/redis/master.conf:/usr/local/etc/redis/redis.conf

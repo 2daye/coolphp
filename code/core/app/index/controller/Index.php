@@ -10,7 +10,7 @@ class Index extends Controller
     public function main()
     {
         parent::assign('smile', ':&nbsp;)');
-        parent::assign('welcome', '欢迎使用 CoolPhp框架 V3.0');
+        parent::assign('welcome', '欢迎使用 COOLPHP框架 v3.0.0');
         parent::display('index/view/index.html');
     }
 }

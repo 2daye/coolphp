@@ -1,1 +1,3 @@
-core/cache/smarty/
+/.docker/data/mysql
+/.docker/data/redis
+/.idea

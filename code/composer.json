@@ -8,10 +8,10 @@
   "authors": [
     {
       "name": "2daye",
-      "email": "2664671146@qq.com"
+      "email": "chen.quanzhang@foxmail.com"
     }
   ],
-  "homepage": "https://www.418412.com/",
+  "homepage": "https://www.418412.com",
   "license": "MIT",
   "require": {
     "php": ">=8.0",

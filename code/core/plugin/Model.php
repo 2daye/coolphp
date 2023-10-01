@@ -2,15 +2,12 @@
 
 /**
  * 模型父类
- * 1.单例模式设计
- * 2.实现数据库基本操作
  * @author 2daye
  */
 
 namespace core\plugin;
 
 use Medoo\Medoo;
-use core\tool\Tool;
 
 class Model
 {

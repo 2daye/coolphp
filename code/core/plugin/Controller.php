@@ -8,18 +8,12 @@ namespace core\plugin;
 
 class Controller
 {
-    protected $frameworkRootPath = '';
-
     /**
      * 控制器父类的构造方法
      * @author 2daye
      */
     public function __construct()
     {
-        // 获取设置框架根路径
-        $request = Request::getInstance();
-        $this->frameworkRootPath = $request->frameworkRootPath();
-
         // 控制器初始化方法
         $this->_init();
     }
@@ -40,9 +34,10 @@ class Controller
      * @return void
      * @author 2daye
      */
-    protected function assign($parameter, $value)
+    protected function assign($parameter, $value): void
     {
         $template = Template::getInstance();
+
         $template->assign($parameter, $value);
     }
 
@@ -53,14 +48,16 @@ class Controller
      * @throws \SmartyException
      * @author 2daye
      */
-    protected function display(string $html = '')
+    protected function display(string $html = ''): void
     {
         $request = Request::getInstance();
-        if ('' == $html) {
+
+        if ($html === '') {
             $html = $request->module . '/view/' . strtolower($request->controller) . '/' . strtolower($request->methods) . '.html';
         }
+
         $template = Template::getInstance();
-        $template->assign('frameworkRootPath', $this->frameworkRootPath);
+
         $template->display($html);
     }
 
